@@ -7,9 +7,9 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-mono-stack);
+  --font-heading: var(--font-heading-stack);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -27,6 +27,11 @@
   --color-input: var(--input);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -48,31 +53,57 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* ─── Neutral default — light ───────────────────────────────────────── */
 :root {
+  /* font stacks — overridden by layout via CSS vars on html */
+  --font-inter: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono-stack: ui-monospace, "Cascadia Code", "Source Code Pro", monospace;
+  --font-heading-stack: var(--font-inter);
+
+  /* surfaces */
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
+
+  /* brand */
   --primary: oklch(0.205 0 0);
   --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.205 0 0);
+
+  /* neutrals */
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+
+  /* feedback */
   --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.985 0 0);
+  --success: oklch(0.52 0.17 155);
+  --success-foreground: oklch(0.985 0 0);
+  --warning: oklch(0.72 0.18 70);
+  --warning-foreground: oklch(0.15 0 0);
+
+  /* chrome */
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
+
+  /* shape */
+  --radius: 0.75rem;
+
+  /* charts */
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
+
+  /* sidebar */
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.205 0 0);
@@ -83,38 +114,131 @@
   --sidebar-ring: oklch(0.708 0 0);
 }
 
+/* ─── Neutral default — dark (calm matte, slight cool tint) ─────────── */
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
+  --background: oklch(0.13 0.008 250);
+  --foreground: oklch(0.94 0.005 250);
+  --card: oklch(0.18 0.007 250);
+  --card-foreground: oklch(0.94 0.005 250);
+  --popover: oklch(0.18 0.007 250);
+  --popover-foreground: oklch(0.94 0.005 250);
+
+  --primary: oklch(0.88 0.005 250);
+  --primary-foreground: oklch(0.18 0.007 250);
+  --secondary: oklch(0.24 0.008 250);
+  --secondary-foreground: oklch(0.94 0.005 250);
+  --accent: oklch(0.24 0.008 250);
+  --accent-foreground: oklch(0.94 0.005 250);
+
+  --muted: oklch(0.24 0.006 250);
+  --muted-foreground: oklch(0.62 0.008 250);
+
+  --destructive: oklch(0.66 0.2 22);
+  --destructive-foreground: oklch(0.985 0 0);
+  --success: oklch(0.62 0.15 155);
+  --success-foreground: oklch(0.1 0 0);
+  --warning: oklch(0.78 0.14 70);
+  --warning-foreground: oklch(0.12 0 0);
+
   --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --input: oklch(1 0 0 / 14%);
+  --ring: oklch(0.55 0.01 250);
+
+  --chart-1: oklch(0.75 0.01 250);
+  --chart-2: oklch(0.55 0.01 250);
+  --chart-3: oklch(0.43 0.008 250);
+  --chart-4: oklch(0.34 0.007 250);
+  --chart-5: oklch(0.26 0.006 250);
+
+  --sidebar: oklch(0.18 0.007 250);
+  --sidebar-foreground: oklch(0.94 0.005 250);
+  --sidebar-primary: oklch(0.65 0.16 200);
   --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.24 0.008 250);
+  --sidebar-accent-foreground: oklch(0.94 0.005 250);
   --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --sidebar-ring: oklch(0.55 0.01 250);
+}
+
+/* ─── Brand: torget — light ──────────────────────────────────────────── */
+/*
+   Nordic marketplace. Teal/blue-green primary. Clean, Scandinavian.
+   Radius: default (0.75rem).
+*/
+[data-brand="torget"] {
+  --primary: oklch(0.5 0.18 200);
+  --primary-foreground: oklch(0.98 0 0);
+  --accent: oklch(0.94 0.05 195);
+  --accent-foreground: oklch(0.25 0.08 200);
+  --ring: oklch(0.5 0.18 200);
+  --sidebar-primary: oklch(0.5 0.18 200);
+  --sidebar-primary-foreground: oklch(0.98 0 0);
+  --chart-1: oklch(0.5 0.18 200);
+  --chart-2: oklch(0.6 0.14 190);
+  --chart-3: oklch(0.7 0.1 185);
+  --chart-4: oklch(0.8 0.07 180);
+  --chart-5: oklch(0.88 0.04 175);
+}
+
+/* ─── Brand: torget — dark ───────────────────────────────────────────── */
+.dark[data-brand="torget"] {
+  --primary: oklch(0.65 0.16 200);
+  --primary-foreground: oklch(0.1 0.01 200);
+  --accent: oklch(0.28 0.06 200);
+  --accent-foreground: oklch(0.88 0.06 200);
+  --ring: oklch(0.65 0.16 200);
+  --sidebar-primary: oklch(0.65 0.16 200);
+  --sidebar-primary-foreground: oklch(0.1 0.01 200);
+  --chart-1: oklch(0.65 0.16 200);
+  --chart-2: oklch(0.72 0.12 190);
+  --chart-3: oklch(0.78 0.08 185);
+  --chart-4: oklch(0.83 0.05 180);
+  --chart-5: oklch(0.88 0.03 175);
+}
+
+/* ─── Brand: furniture — light ───────────────────────────────────────── */
+/*
+   Warm furniture / home goods. Amber-brown primary. Refined, editorial.
+   Radius: sharp (0.5rem) — structured, premium feel.
+*/
+[data-brand="furniture"] {
+  --primary: oklch(0.52 0.12 55);
+  --primary-foreground: oklch(0.98 0 0);
+  --secondary: oklch(0.96 0.03 60);
+  --secondary-foreground: oklch(0.3 0.08 55);
+  --accent: oklch(0.93 0.06 65);
+  --accent-foreground: oklch(0.35 0.1 55);
+  --ring: oklch(0.52 0.12 55);
+  --radius: 0.5rem;
+  --sidebar-primary: oklch(0.52 0.12 55);
+  --sidebar-primary-foreground: oklch(0.98 0 0);
+  --sidebar-accent: oklch(0.96 0.03 60);
+  --sidebar-accent-foreground: oklch(0.3 0.08 55);
+  --chart-1: oklch(0.52 0.12 55);
+  --chart-2: oklch(0.62 0.1 50);
+  --chart-3: oklch(0.72 0.08 45);
+  --chart-4: oklch(0.81 0.06 40);
+  --chart-5: oklch(0.89 0.04 35);
+}
+
+/* ─── Brand: furniture — dark ────────────────────────────────────────── */
+.dark[data-brand="furniture"] {
+  --primary: oklch(0.68 0.1 55);
+  --primary-foreground: oklch(0.1 0.02 55);
+  --secondary: oklch(0.26 0.04 55);
+  --secondary-foreground: oklch(0.92 0.02 55);
+  --accent: oklch(0.28 0.05 58);
+  --accent-foreground: oklch(0.88 0.04 58);
+  --ring: oklch(0.68 0.1 55);
+  --sidebar-primary: oklch(0.68 0.1 55);
+  --sidebar-primary-foreground: oklch(0.1 0.02 55);
+  --sidebar-accent: oklch(0.26 0.04 55);
+  --sidebar-accent-foreground: oklch(0.92 0.02 55);
+  --chart-1: oklch(0.68 0.1 55);
+  --chart-2: oklch(0.75 0.08 50);
+  --chart-3: oklch(0.81 0.06 45);
+  --chart-4: oklch(0.86 0.04 40);
+  --chart-5: oklch(0.9 0.02 35);
 }
 
 @layer base {
