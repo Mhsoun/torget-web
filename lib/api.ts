@@ -3,6 +3,7 @@ import type {
   DashboardStatsResponse,
   InquiryResponse,
   ItemDetailResponse,
+  ItemImageResponse,
   ItemResponse,
   ItemStatus,
   ItemWriteRequest,
@@ -14,9 +15,19 @@ import type {
   StatusPatchRequest,
 } from "@/types/torget";
 
-const BASE_URL = (
-  process.env.TORGET_API_URL ?? process.env.NEXT_PUBLIC_TORGET_API_URL ?? ""
-).replace(/\/$/, "");
+export type ItemImageWriteRequest = {
+  url: string;
+  altText?: string;
+  sortOrder: number;
+  isPrimary: boolean;
+};
+
+const resolvedBaseUrl =
+  process.env.NEXT_PUBLIC_TORGET_API_URL ??
+  process.env.TORGET_API_URL ??
+  (process.env.NODE_ENV === "development" ? "http://localhost:5000" : "");
+
+const BASE_URL = resolvedBaseUrl.replace(/\/$/, "");
 
 async function apiFetch<T>(
   path: string,
@@ -136,4 +147,41 @@ export function patchInquiryStatus(id: string, body: StatusPatchRequest, token: 
 
 export function getLeads(token: string): Promise<LeadResponse[]> {
   return apiFetch<LeadResponse[]>("/api/admin/leads", { token });
+}
+
+// --- Admin: Item Images ---
+
+export function listItemImages(itemId: string, token: string): Promise<ItemImageResponse[]> {
+  return apiFetch<ItemImageResponse[]>(`/api/admin/items/${itemId}/images`, { token });
+}
+
+export function addItemImage(itemId: string, body: ItemImageWriteRequest, token: string): Promise<ItemImageResponse> {
+  return apiFetch<ItemImageResponse>(`/api/admin/items/${itemId}/images`, {
+    method: "POST",
+    body: JSON.stringify(body),
+    token,
+  });
+}
+
+export function updateItemImage(itemId: string, imageId: string, body: ItemImageWriteRequest, token: string): Promise<void> {
+  return apiFetch<void>(`/api/admin/items/${itemId}/images/${imageId}`, {
+    method: "PUT",
+    body: JSON.stringify(body),
+    token,
+  });
+}
+
+export function deleteItemImage(itemId: string, imageId: string, token: string): Promise<void> {
+  return apiFetch<void>(`/api/admin/items/${itemId}/images/${imageId}`, {
+    method: "DELETE",
+    token,
+  });
+}
+
+export function setItemImagePrimary(itemId: string, imageId: string, token: string): Promise<void> {
+  return apiFetch<void>(`/api/admin/items/${itemId}/images/${imageId}/set-primary`, {
+    method: "POST",
+    body: JSON.stringify({}),
+    token,
+  });
 }

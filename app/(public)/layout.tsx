@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { CategoryResponse } from "@/types/torget";
 import { getCategories } from "@/lib/api";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
 
 export default async function PublicLayout({
   children,
@@ -16,7 +17,7 @@ export default async function PublicLayout({
 
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="border-b bg-white sticky top-0 z-10">
+      <header className="border-b bg-background sticky top-0 z-10">
         <div className="container mx-auto px-4 h-14 flex items-center justify-between">
           <Link href="/" className="text-xl font-bold tracking-tight">
             Torget
@@ -35,6 +36,7 @@ export default async function PublicLayout({
               </Link>
             ))}
           </nav>
+          <ThemeToggle />
         </div>
       </header>
       <main className="flex-1 container mx-auto px-4 py-8">{children}</main>

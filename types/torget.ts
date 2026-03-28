@@ -16,6 +16,27 @@ export type ItemResponse = {
   id: string;
   name: string;
   price: number;
+  description?: string;
+  status: ItemStatus;
+  categoryName?: string;
+  primaryImageUrl?: string;
+};
+
+export type ItemImageResponse = {
+  id: string;
+  url: string;
+  altText?: string;
+  sortOrder: number;
+  isPrimary: boolean;
+};
+
+export type ItemAttributeResponse = {
+  attributeId: string;
+  name: string;
+  slug: string;
+  type: string;
+  value: string;
+  label: string;
 };
 
 export type ItemDetailResponse = {
@@ -25,6 +46,11 @@ export type ItemDetailResponse = {
   categoryId: string | null;
   status: ItemStatus;
   createdAtUtc: string;
+  description?: string;
+  categoryName?: string;
+  primaryImageUrl?: string;
+  images: ItemImageResponse[];
+  attributes: ItemAttributeResponse[];
 };
 
 export type CategoryResponse = {
