@@ -19,6 +19,7 @@ export type ItemResponse = {
   description?: string;
   status: ItemStatus;
   categoryName?: string;
+  categorySlug?: string;
   primaryImageUrl?: string;
 };
 
@@ -48,6 +49,7 @@ export type ItemDetailResponse = {
   createdAtUtc: string;
   description?: string;
   categoryName?: string;
+  categorySlug?: string;
   primaryImageUrl?: string;
   images: ItemImageResponse[];
   attributes: ItemAttributeResponse[];
@@ -57,6 +59,69 @@ export type CategoryResponse = {
   id: string;
   name: string;
   slug: string;
+};
+
+export type PublicAttributeOptionResponse = {
+  value: string;
+  label: string;
+};
+
+export type PublicAttributeFilterResponse = {
+  id: string;
+  name: string;
+  slug: string;
+  type: string;
+  options: PublicAttributeOptionResponse[];
+};
+
+export type ItemBrowseSort = "newest" | "price-asc" | "price-desc" | "name-asc" | "name-desc";
+
+export type AdminAttributeOptionResponse = {
+  id: string;
+  value: string;
+  label: string;
+  sortOrder: number;
+};
+
+export type AdminAttributeDefinitionResponse = {
+  id: string;
+  name: string;
+  slug: string;
+  type: string;
+  isRequired: boolean;
+  isSearchable: boolean;
+  sortOrder: number;
+  options: AdminAttributeOptionResponse[];
+};
+
+export type AdminAttributeOptionWriteRequest = {
+  value: string;
+  label: string;
+  sortOrder: number;
+};
+
+export type AdminAttributeDefinitionWriteRequest = {
+  name: string;
+  slug: string;
+  type: string;
+  isRequired: boolean;
+  isSearchable: boolean;
+  sortOrder: number;
+  options: AdminAttributeOptionWriteRequest[];
+};
+
+export type AdminItemAttributeValueResponse = {
+  attributeId: string;
+  value: string;
+};
+
+export type AdminItemAttributeValueWriteRequest = {
+  attributeId: string;
+  value?: string;
+};
+
+export type AdminItemAttributesUpdateRequest = {
+  attributes: AdminItemAttributeValueWriteRequest[];
 };
 
 export type LoginRequest = {
@@ -86,9 +151,20 @@ export type OrderResponse = {
 export type InquiryResponse = {
   id: string;
   itemId: string;
+  name: string;
   email: string;
+  phone?: string;
   message: string;
   status: string;
+  createdAtUtc: string;
+};
+
+export type InquiryCreateRequest = {
+  itemId: string;
+  name: string;
+  email: string;
+  phone?: string;
+  message: string;
 };
 
 export type LeadResponse = {
@@ -101,6 +177,7 @@ export type LeadResponse = {
 export type ItemWriteRequest = {
   name: string;
   price: number;
+  description?: string;
   categoryId?: string;
   status: ItemStatus;
 };
@@ -112,3 +189,35 @@ export type ItemStatusPatchRequest = {
 export type StatusPatchRequest = {
   status: string;
 };
+
+export type BusinessFeaturesResponse = {
+  showInquiries: boolean;
+  showPrices: boolean;
+  showCategories: boolean;
+};
+
+export type BusinessConfigResponse = {
+  name: string;
+  tagline?: string;
+  slug: string;
+  locale: string;
+  currency: string;
+  brandKey: string;
+  contactEmail?: string;
+  features: BusinessFeaturesResponse;
+};
+
+export type BusinessConfigWriteRequest = {
+  name: string;
+  tagline?: string;
+  slug: string;
+  locale: string;
+  currency: string;
+  brandKey: string;
+  contactEmail?: string;
+  showInquiries: boolean;
+  showPrices: boolean;
+  showCategories: boolean;
+};
+
+export const INQUIRY_STATUSES = ["New", "Open", "In Progress", "Resolved", "Closed"] as const;

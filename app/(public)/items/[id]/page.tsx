@@ -1,7 +1,10 @@
+import { Fragment } from "react";
 import { notFound } from "next/navigation";
 import { getItem } from "@/lib/api";
+import { getCachedBusinessConfig } from "@/lib/config";
 import { Badge } from "@/components/ui/badge";
 import { ItemImage } from "@/components/items/ItemImage";
+import { InquiryForm } from "@/components/public/InquiryForm";
 import { ITEM_STATUS_LABELS } from "@/types/torget";
 import { formatPrice, formatDate, statusBadgeVariant } from "@/lib/formatters";
 import Link from "next/link";
@@ -13,12 +16,20 @@ interface ItemDetailPageProps {
 export default async function ItemDetailPage({ params }: ItemDetailPageProps) {
   const { id } = await params;
 
-  let item;
-  try {
-    item = await getItem(id);
-  } catch {
+  const [itemResult, config] = await Promise.allSettled([
+    getItem(id),
+    getCachedBusinessConfig(),
+  ]);
+
+  if (itemResult.status === "rejected") {
     notFound();
   }
+
+  const item = itemResult.value;
+  const showInquiries =
+    config.status === "fulfilled" ? config.value.features.showInquiries : true;
+  const showPrices =
+    config.status === "fulfilled" ? config.value.features.showPrices : true;
 
   const galleryImages = item.images ?? [];
   const hasMultipleImages = galleryImages.length > 1;
@@ -59,9 +70,11 @@ export default async function ItemDetailPage({ params }: ItemDetailPageProps) {
           </Badge>
         </div>
 
-        <p className="text-3xl font-semibold text-primary">
-          {formatPrice(item.price)}
-        </p>
+        {showPrices && (
+          <p className="text-3xl font-semibold text-primary">
+            {formatPrice(item.price)}
+          </p>
+        )}
 
         {item.description && (
           <p className="text-muted-foreground leading-relaxed">
@@ -72,7 +85,16 @@ export default async function ItemDetailPage({ params }: ItemDetailPageProps) {
         {item.categoryName && (
           <p className="text-sm text-muted-foreground">
             Category:{" "}
-            <span className="font-medium text-foreground">{item.categoryName}</span>
+            {item.categorySlug ? (
+              <Link
+                href={`/categories/${item.categorySlug}`}
+                className="font-medium text-foreground hover:text-primary transition-colors"
+              >
+                {item.categoryName}
+              </Link>
+            ) : (
+              <span className="font-medium text-foreground">{item.categoryName}</span>
+            )}
           </p>
         )}
 
@@ -83,10 +105,10 @@ export default async function ItemDetailPage({ params }: ItemDetailPageProps) {
             </h2>
             <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm">
               {item.attributes.map((attr) => (
-                <>
-                  <dt key={`k-${attr.attributeId}`} className="text-muted-foreground">{attr.name}</dt>
-                  <dd key={`v-${attr.attributeId}`} className="font-medium">{attr.label}</dd>
-                </>
+                <Fragment key={attr.attributeId}>
+                  <dt className="text-muted-foreground">{attr.name}</dt>
+                  <dd className="font-medium">{attr.label}</dd>
+                </Fragment>
               ))}
             </dl>
           </div>
@@ -96,6 +118,8 @@ export default async function ItemDetailPage({ params }: ItemDetailPageProps) {
           Listed {formatDate(item.createdAtUtc)}
         </p>
       </div>
+
+      {showInquiries && <InquiryForm itemId={item.id} />}
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
-import type { ItemResponse } from "@/types/torget";
-import { getCategories, getItems } from "@/lib/api";
-import { ItemGrid } from "@/components/items/ItemGrid";
+import { getCategoryBySlug } from "@/lib/api";
+import { getCachedBusinessConfig } from "@/lib/config";
+import CategoryBrowsePage from "./CategoryBrowsePage";
 
 interface CategoryPageProps {
   params: Promise<{ slug: string }>;
@@ -12,8 +12,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
 
   let category;
   try {
-    const categories = await getCategories();
-    category = categories.find((c) => c.slug === slug);
+    category = await getCategoryBySlug(slug);
   } catch {
     notFound();
   }
@@ -22,17 +21,8 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
     notFound();
   }
 
-  let items: ItemResponse[] = [];
-  try {
-    items = await getItems({ categoryId: category.id });
-  } catch {
-    // return empty grid
-  }
+  const config = await getCachedBusinessConfig();
+  const showPrices = config.features.showPrices;
 
-  return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold">{category.name}</h1>
-      <ItemGrid items={items} emptyMessage={`No items in ${category.name} yet.`} />
-    </div>
-  );
+  return <CategoryBrowsePage category={category} showPrices={showPrices} />;
 }

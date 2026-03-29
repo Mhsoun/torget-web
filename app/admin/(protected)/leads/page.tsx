@@ -18,7 +18,7 @@ export default function AdminLeadsPage() {
   const { data: session } = useSession();
   const token = session?.accessToken ?? "";
 
-  const { data: leads = [], isLoading } = useQuery({
+  const { data: leads = [], isLoading, isError: isLeadsError } = useQuery({
     queryKey: ["admin-leads"],
     queryFn: () => getLeads(token),
     enabled: !!token,
@@ -30,7 +30,7 @@ export default function AdminLeadsPage() {
         <Users className="h-6 w-6" />
         <h1 className="text-2xl font-bold">Leads</h1>
       </div>
-      <div className="rounded-md border bg-white">
+      <div className="rounded-md border bg-card">
         <Table>
           <TableHeader>
             <TableRow>
@@ -43,6 +43,12 @@ export default function AdminLeadsPage() {
             {isLoading ? (
               <TableRow>
                 <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">Loading…</TableCell>
+              </TableRow>
+            ) : isLeadsError ? (
+              <TableRow>
+                <TableCell colSpan={3} className="text-center py-8 text-destructive">
+                  Failed to load leads. Please refresh the page.
+                </TableCell>
               </TableRow>
             ) : leads.length === 0 ? (
               <TableRow>

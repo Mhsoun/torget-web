@@ -1,7 +1,15 @@
 import type {
+  AdminAttributeDefinitionResponse,
+  AdminAttributeDefinitionWriteRequest,
+  AdminItemAttributesUpdateRequest,
+  AdminItemAttributeValueResponse,
+  BusinessConfigResponse,
+  BusinessConfigWriteRequest,
   CategoryResponse,
   DashboardStatsResponse,
+  InquiryCreateRequest,
   InquiryResponse,
+  ItemBrowseSort,
   ItemDetailResponse,
   ItemImageResponse,
   ItemResponse,
@@ -12,6 +20,7 @@ import type {
   LoginRequest,
   LoginResponse,
   OrderResponse,
+  PublicAttributeFilterResponse,
   StatusPatchRequest,
 } from "@/types/torget";
 
@@ -29,6 +38,16 @@ const resolvedBaseUrl =
 
 const BASE_URL = resolvedBaseUrl.replace(/\/$/, "");
 
+export class ApiError extends Error {
+  constructor(
+    public readonly status: number,
+    message: string,
+  ) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
 async function apiFetch<T>(
   path: string,
   options?: RequestInit & { token?: string }
@@ -44,7 +63,7 @@ async function apiFetch<T>(
 
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    throw new Error(`API error ${res.status}: ${text}`);
+    throw new ApiError(res.status, `API error ${res.status}: ${text}`);
   }
 
   if (res.status === 204) {
@@ -57,12 +76,22 @@ async function apiFetch<T>(
 // --- Public ---
 
 export function getItems(params?: {
+  q?: string;
   categoryId?: string;
   status?: ItemStatus;
+  sort?: ItemBrowseSort;
+  attributeFilters?: Record<string, string>;
 }): Promise<ItemResponse[]> {
   const query = new URLSearchParams();
+  if (params?.q) query.set("q", params.q);
   if (params?.categoryId) query.set("categoryId", params.categoryId);
   if (params?.status !== undefined) query.set("status", String(params.status));
+  if (params?.sort) query.set("sort", params.sort);
+  if (params?.attributeFilters) {
+    for (const [slug, value] of Object.entries(params.attributeFilters)) {
+      if (value) query.set(`attr_${slug}`, value);
+    }
+  }
   const qs = query.toString();
   return apiFetch<ItemResponse[]>(`/api/items${qs ? `?${qs}` : ""}`);
 }
@@ -71,8 +100,35 @@ export function getItem(id: string): Promise<ItemDetailResponse> {
   return apiFetch<ItemDetailResponse>(`/api/items/${id}`);
 }
 
+export function getBusinessConfig(): Promise<BusinessConfigResponse> {
+  return apiFetch<BusinessConfigResponse>("/api/config");
+}
+
+export function getAdminBusinessConfig(token: string): Promise<BusinessConfigResponse> {
+  return apiFetch<BusinessConfigResponse>("/api/admin/settings/business", { token });
+}
+
+export function upsertBusinessConfig(
+  body: BusinessConfigWriteRequest,
+  token: string,
+): Promise<BusinessConfigResponse> {
+  return apiFetch<BusinessConfigResponse>("/api/admin/settings/business", {
+    method: "PUT",
+    body: JSON.stringify(body),
+    token,
+  });
+}
+
 export function getCategories(): Promise<CategoryResponse[]> {
   return apiFetch<CategoryResponse[]>("/api/categories");
+}
+
+export function getCategoryBySlug(slug: string): Promise<CategoryResponse> {
+  return apiFetch<CategoryResponse>(`/api/categories/${encodeURIComponent(slug)}`);
+}
+
+export function getPublicBrowseFilters(): Promise<PublicAttributeFilterResponse[]> {
+  return apiFetch<PublicAttributeFilterResponse[]>("/api/browse/filters");
 }
 
 // --- Auth ---
@@ -88,6 +144,60 @@ export function login(body: LoginRequest): Promise<LoginResponse> {
 
 export function getDashboardStats(token: string): Promise<DashboardStatsResponse> {
   return apiFetch<DashboardStatsResponse>("/api/admin/dashboard", { token });
+}
+
+export function getAdminAttributes(token: string): Promise<AdminAttributeDefinitionResponse[]> {
+  return apiFetch<AdminAttributeDefinitionResponse[]>("/api/admin/attributes", { token });
+}
+
+export function getAdminAttribute(id: string, token: string): Promise<AdminAttributeDefinitionResponse> {
+  return apiFetch<AdminAttributeDefinitionResponse>(`/api/admin/attributes/${id}`, { token });
+}
+
+export function createAdminAttribute(
+  body: AdminAttributeDefinitionWriteRequest,
+  token: string
+): Promise<AdminAttributeDefinitionResponse> {
+  return apiFetch<AdminAttributeDefinitionResponse>("/api/admin/attributes", {
+    method: "POST",
+    body: JSON.stringify(body),
+    token,
+  });
+}
+
+export function updateAdminAttribute(
+  id: string,
+  body: AdminAttributeDefinitionWriteRequest,
+  token: string
+): Promise<AdminAttributeDefinitionResponse> {
+  return apiFetch<AdminAttributeDefinitionResponse>(`/api/admin/attributes/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(body),
+    token,
+  });
+}
+
+export function deleteAdminAttribute(id: string, token: string): Promise<void> {
+  return apiFetch<void>(`/api/admin/attributes/${id}`, {
+    method: "DELETE",
+    token,
+  });
+}
+
+export function getAdminItemAttributes(itemId: string, token: string): Promise<AdminItemAttributeValueResponse[]> {
+  return apiFetch<AdminItemAttributeValueResponse[]>(`/api/admin/items/${itemId}/attributes`, { token });
+}
+
+export function updateAdminItemAttributes(
+  itemId: string,
+  body: AdminItemAttributesUpdateRequest,
+  token: string
+): Promise<void> {
+  return apiFetch<void>(`/api/admin/items/${itemId}/attributes`, {
+    method: "PUT",
+    body: JSON.stringify(body),
+    token,
+  });
 }
 
 export function createItem(body: ItemWriteRequest, token: string): Promise<ItemDetailResponse> {
@@ -133,8 +243,19 @@ export function patchOrderStatus(id: string, body: StatusPatchRequest, token: st
   });
 }
 
+export function createInquiry(body: InquiryCreateRequest): Promise<void> {
+  return apiFetch<void>("/api/inquiries", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
 export function getInquiries(token: string): Promise<InquiryResponse[]> {
   return apiFetch<InquiryResponse[]>("/api/admin/inquiries", { token });
+}
+
+export function getInquiry(id: string, token: string): Promise<InquiryResponse> {
+  return apiFetch<InquiryResponse>(`/api/admin/inquiries/${id}`, { token });
 }
 
 export function patchInquiryStatus(id: string, body: StatusPatchRequest, token: string): Promise<void> {
@@ -184,4 +305,34 @@ export function setItemImagePrimary(itemId: string, imageId: string, token: stri
     body: JSON.stringify({}),
     token,
   });
+}
+
+export async function uploadItemImage(
+  itemId: string,
+  file: File,
+  meta: { altText?: string; sortOrder: number; isPrimary: boolean },
+  token: string,
+): Promise<ItemImageResponse> {
+  const form = new FormData();
+  form.append("file", file);
+  form.append("sortOrder", String(meta.sortOrder));
+  form.append("isPrimary", String(meta.isPrimary));
+  if (meta.altText) {
+    form.append("altText", meta.altText);
+  }
+
+  const res = await fetch(`${BASE_URL}/api/admin/items/${itemId}/images/upload`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: form,
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new ApiError(res.status, `Upload failed ${res.status}: ${text}`);
+  }
+
+  return res.json() as Promise<ItemImageResponse>;
 }

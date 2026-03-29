@@ -9,14 +9,18 @@ import {
   ShoppingCart,
   MessageSquare,
   Users,
+  Tags,
+  Settings,
 } from "lucide-react";
 
 const navItems = [
   { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/items", label: "Items", icon: Package },
+  { href: "/admin/attributes", label: "Attributes", icon: Tags },
   { href: "/admin/orders", label: "Orders", icon: ShoppingCart },
   { href: "/admin/inquiries", label: "Inquiries", icon: MessageSquare },
   { href: "/admin/leads", label: "Leads", icon: Users },
+  { href: "/admin/settings/business", label: "Settings", icon: Settings },
 ];
 
 export function AdminNav() {

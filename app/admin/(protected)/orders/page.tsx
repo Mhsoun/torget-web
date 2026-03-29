@@ -14,6 +14,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ShoppingCart } from "lucide-react";
+import { formatPrice } from "@/lib/formatters";
 
 const ORDER_STATUSES = ["Pending", "Processing", "Shipped", "Completed", "Cancelled"];
 
@@ -22,7 +23,7 @@ export default function AdminOrdersPage() {
   const token = session?.accessToken ?? "";
   const qc = useQueryClient();
 
-  const { data: orders = [], isLoading } = useQuery({
+  const { data: orders = [], isLoading, isError: isOrdersError } = useQuery({
     queryKey: ["admin-orders"],
     queryFn: () => getOrders(token),
     enabled: !!token,
@@ -40,7 +41,7 @@ export default function AdminOrdersPage() {
         <ShoppingCart className="h-6 w-6" />
         <h1 className="text-2xl font-bold">Orders</h1>
       </div>
-      <div className="rounded-md border bg-white">
+      <div className="rounded-md border bg-card">
         <Table>
           <TableHeader>
             <TableRow>
@@ -56,6 +57,12 @@ export default function AdminOrdersPage() {
               <TableRow>
                 <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Loading…</TableCell>
               </TableRow>
+            ) : isOrdersError ? (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center py-8 text-destructive">
+                  Failed to load orders. Please refresh the page.
+                </TableCell>
+              </TableRow>
             ) : orders.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No orders yet.</TableCell>
@@ -65,9 +72,7 @@ export default function AdminOrdersPage() {
                 <TableRow key={order.id}>
                   <TableCell className="font-mono text-xs">{order.id.slice(0, 8)}…</TableCell>
                   <TableCell className="font-mono text-xs">{order.itemId.slice(0, 8)}…</TableCell>
-                  <TableCell>
-                    {new Intl.NumberFormat("nb-NO", { style: "currency", currency: "NOK" }).format(order.amount)}
-                  </TableCell>
+                  <TableCell>{formatPrice(order.amount)}</TableCell>
                   <TableCell>
                     <Badge variant="secondary">{order.status || "—"}</Badge>
                   </TableCell>

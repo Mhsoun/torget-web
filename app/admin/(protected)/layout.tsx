@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { AdminNav } from "@/components/admin/AdminNav";
 import { signOut } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
+import { getCachedBusinessConfig } from "@/lib/config";
 
 export default async function AdminLayout({
   children,
@@ -15,10 +16,12 @@ export default async function AdminLayout({
     redirect("/admin/login");
   }
 
+  const config = await getCachedBusinessConfig();
+
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="border-b bg-white h-14 flex items-center px-6 justify-between">
-        <span className="font-bold text-lg">Torget Admin</span>
+      <header className="border-b bg-background h-14 flex items-center px-6 justify-between">
+        <span className="font-bold text-lg">{config.name} Admin</span>
         <form
           action={async () => {
             "use server";
@@ -31,7 +34,7 @@ export default async function AdminLayout({
         </form>
       </header>
       <div className="flex flex-1">
-        <aside className="w-52 border-r bg-white">
+        <aside className="w-52 border-r bg-background">
           <AdminNav />
         </aside>
         <main className="flex-1 p-6 bg-muted/20">{children}</main>

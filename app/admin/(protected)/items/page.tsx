@@ -1,17 +1,19 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 import {
   getItems,
   getCategories,
   createItem,
-  updateItem,
+  updateAdminItemAttributes,
   deleteItem,
   patchItemStatus,
 } from "@/lib/api";
-import { ItemDetailResponse, ItemStatus, ITEM_STATUS_LABELS } from "@/types/torget";
+import { ItemStatus, ITEM_STATUS_LABELS } from "@/types/torget";
+import { formatPrice } from "@/lib/formatters";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -29,18 +31,19 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ItemFormDialog, ItemFormValues } from "@/components/admin/ItemFormDialog";
+import { ItemFormDialog } from "@/components/admin/ItemFormDialog";
+import type { AdminItemFormSubmitData } from "@/components/admin/AdminItemForm";
 import { MoreHorizontal, Plus } from "lucide-react";
 
 export default function AdminItemsPage() {
+  const router = useRouter();
   const { data: session } = useSession();
   const token = session?.accessToken ?? "";
   const qc = useQueryClient();
 
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editing, setEditing] = useState<ItemDetailResponse | undefined>();
 
-  const { data: items = [], isLoading } = useQuery({
+  const { data: items = [], isLoading, isError: isItemsError } = useQuery({
     queryKey: ["items"],
     queryFn: () => getItems(),
     enabled: !!token,
@@ -50,17 +53,12 @@ export default function AdminItemsPage() {
     queryKey: ["categories"],
     queryFn: getCategories,
   });
-
-  const categoryMap = Object.fromEntries(categories.map((c) => [c.id, c.name]));
-
   const createMutation = useMutation({
-    mutationFn: (values: ItemFormValues) => createItem(values, token),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["items"] }),
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: ({ id, values }: { id: string; values: ItemFormValues }) =>
-      updateItem(id, values, token),
+    mutationFn: async ({ item, attributes }: AdminItemFormSubmitData) => {
+      const created = await createItem(item, token);
+      await updateAdminItemAttributes(created.id, attributes, token);
+      return created;
+    },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["items"] }),
   });
 
@@ -75,12 +73,10 @@ export default function AdminItemsPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["items"] }),
   });
 
-  async function handleFormSubmit(values: ItemFormValues) {
-    if (editing) {
-      await updateMutation.mutateAsync({ id: editing.id, values });
-    } else {
-      await createMutation.mutateAsync(values);
-    }
+  async function handleCreate(values: AdminItemFormSubmitData) {
+    const created = await createMutation.mutateAsync(values);
+    setDialogOpen(false);
+    router.push(`/admin/items/${created.id}?created=1`);
   }
 
   return (
@@ -89,7 +85,6 @@ export default function AdminItemsPage() {
         <h1 className="text-2xl font-bold">Items</h1>
         <Button
           onClick={() => {
-            setEditing(undefined);
             setDialogOpen(true);
           }}
         >
@@ -98,7 +93,7 @@ export default function AdminItemsPage() {
         </Button>
       </div>
 
-      <div className="rounded-md border bg-white">
+      <div className="rounded-md border bg-background">
         <Table>
           <TableHeader>
             <TableRow>
@@ -116,6 +111,12 @@ export default function AdminItemsPage() {
                   Loading…
                 </TableCell>
               </TableRow>
+            ) : isItemsError ? (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center py-8 text-destructive">
+                  Failed to load items. Please refresh the page.
+                </TableCell>
+              </TableRow>
             ) : items.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
@@ -124,23 +125,15 @@ export default function AdminItemsPage() {
               </TableRow>
             ) : (
               items.map((item) => {
-                const detail = item as unknown as ItemDetailResponse;
                 return (
                   <TableRow key={item.id}>
                     <TableCell className="font-medium">{item.name}</TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {detail.categoryId ? (categoryMap[detail.categoryId] ?? "—") : "—"}
-                    </TableCell>
+                    <TableCell className="text-muted-foreground">{item.categoryName ?? "—"}</TableCell>
+                    <TableCell>{formatPrice(item.price)}</TableCell>
                     <TableCell>
-                      {new Intl.NumberFormat("nb-NO", {
-                        style: "currency",
-                        currency: "NOK",
-                      }).format(item.price)}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={detail.status === ItemStatus.Active ? "default" : "secondary"}>
-                        {detail.status !== undefined
-                          ? ITEM_STATUS_LABELS[detail.status]
+                      <Badge variant={item.status === ItemStatus.Active ? "default" : "secondary"}>
+                        {item.status !== undefined
+                          ? ITEM_STATUS_LABELS[item.status]
                           : "—"}
                       </Badge>
                     </TableCell>
@@ -151,15 +144,12 @@ export default function AdminItemsPage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem
-                            onClick={() => {
-                              setEditing(detail);
-                              setDialogOpen(true);
-                            }}
+                            onClick={() => router.push(`/admin/items/${item.id}`)}
                           >
                             Edit
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          {detail.status !== ItemStatus.Active && (
+                          {item.status !== ItemStatus.Active && (
                             <DropdownMenuItem
                               onClick={() =>
                                 statusMutation.mutate({ id: item.id, status: ItemStatus.Active })
@@ -168,7 +158,7 @@ export default function AdminItemsPage() {
                               Set Active
                             </DropdownMenuItem>
                           )}
-                          {detail.status !== ItemStatus.Archived && (
+                          {item.status !== ItemStatus.Archived && (
                             <DropdownMenuItem
                               onClick={() =>
                                 statusMutation.mutate({ id: item.id, status: ItemStatus.Archived })
@@ -202,10 +192,9 @@ export default function AdminItemsPage() {
       <ItemFormDialog
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
-        onSubmit={handleFormSubmit}
+        onSubmit={handleCreate}
         categories={categories}
-        initialValues={editing}
-        title={editing ? "Edit item" : "New item"}
+        token={token}
       />
     </div>
   );

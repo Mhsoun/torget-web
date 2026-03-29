@@ -7,6 +7,8 @@ interface ItemGridProps {
   isLoading?: boolean;
   error?: string | null;
   emptyMessage?: string;
+  emptySecondary?: string;
+  showPrices?: boolean;
 }
 
 const SKELETON_COUNT = 8;
@@ -33,6 +35,8 @@ export function ItemGrid({
   isLoading,
   error,
   emptyMessage = "No items found",
+  emptySecondary = "Try adjusting the filters or check back later.",
+  showPrices = true,
 }: ItemGridProps) {
   if (isLoading) {
     return (
@@ -67,9 +71,7 @@ export function ItemGrid({
           <PackageSearch className="w-6 h-6 text-muted-foreground" />
         </div>
         <p className="text-base font-medium">{emptyMessage}</p>
-        <p className="text-sm text-muted-foreground max-w-xs">
-          Try adjusting the filters or check back later.
-        </p>
+        <p className="text-sm text-muted-foreground max-w-xs">{emptySecondary}</p>
       </div>
     );
   }
@@ -77,7 +79,7 @@ export function ItemGrid({
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
       {items.map((item) => (
-        <ItemCard key={item.id} item={item} />
+        <ItemCard key={item.id} item={item} showPrices={showPrices} />
       ))}
     </div>
   );
