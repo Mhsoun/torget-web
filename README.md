@@ -1,36 +1,60 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# torget-web
 
-## Getting Started
+Public marketplace and admin UI for Torget — **Next.js 15**, React 19, Tailwind CSS, shadcn/ui.
 
-First, run the development server:
+## Architecture
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+```
+Browser  →  torget-web (Next.js)  →  torget-core (HTTP API)
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+`torget-web` calls `torget-core` only. It never communicates with `torget-data` or PostgreSQL directly.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Local run (default — host-run services)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Ensure `torget-core` is running on port 5000 before starting the web app.
 
-## Learn More
+```powershell
+cd torget-web
+npm install
+npm run dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+Default listen URL: `http://localhost:3000`
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+The dev server defaults to `http://localhost:5000` as the API base when `NEXT_PUBLIC_TORGET_API_URL` is not set. Set it explicitly if your `torget-core` instance is on a different URL:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```powershell
+# .env.local (not committed)
+NEXT_PUBLIC_TORGET_API_URL=http://localhost:5000
+```
 
-## Deploy on Vercel
+## Local run (optional — Podman Compose)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+See `torget-dev/README.md` for the optional Compose path that runs the full stack in containers.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Environment variables
+
+| Variable | Description |
+|----------|-------------|
+| `NEXT_PUBLIC_TORGET_API_URL` | Base URL of `torget-core`. Defaults to `http://localhost:5000` in development. Required in staging and production. |
+| `NEXTAUTH_SECRET` | Required for NextAuth session signing in production. |
+| `NEXTAUTH_URL` | Canonical URL of the web app. Required in production. |
+
+## Run type checks
+
+```powershell
+npx tsc --noEmit
+```
+
+## Default URLs
+
+| Page | URL |
+|------|-----|
+| Public site | http://localhost:3000 |
+| Admin | http://localhost:3000/admin |
+| Admin login | http://localhost:3000/admin/login |
+
+## Environment strategy
+
+See [torget-docs/architecture/environment-strategy.md](../torget-docs/architecture/environment-strategy.md) for the authoritative model covering local, staging, and production environments.

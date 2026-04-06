@@ -5,6 +5,7 @@ import { getCategories } from "@/lib/api";
 import { getCachedBusinessConfig } from "@/lib/config";
 import { getBrand } from "@/lib/themes";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
+import { PublicLayoutDebugProbe } from "@/components/debug/PublicLayoutDebugProbe";
 
 export default async function PublicLayout({
   children,
@@ -21,9 +22,28 @@ export default async function PublicLayout({
   const config = await getCachedBusinessConfig();
   const brand = getBrand(config.brandKey);
   const showLogo = !!brand.logoPath;
+  // #region agent log
+  fetch("http://127.0.0.1:7268/ingest/5a5cc7fb-dc54-4f3b-8e40-459b194f7edd", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "1a99c7" },
+    body: JSON.stringify({
+      sessionId: "1a99c7",
+      runId: "run-verify",
+      hypothesisId: "H7",
+      location: "app/(public)/layout.tsx:25",
+      message: "Public layout rendered on server",
+      data: {
+        brandKey: config.brandKey,
+        showLogo,
+      },
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {});
+  // #endregion
 
   return (
     <div className="min-h-screen flex flex-col">
+      <PublicLayoutDebugProbe />
       <header className="border-b bg-background sticky top-0 z-10">
         <div className="container mx-auto px-4 h-14 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 text-xl font-bold tracking-tight">
@@ -31,9 +51,8 @@ export default async function PublicLayout({
               <Image
                 src={brand.logoPath!}
                 alt={config.name}
-                width={120}
+                width={117}
                 height={32}
-                className="h-8 w-auto"
                 priority
               />
             ) : (

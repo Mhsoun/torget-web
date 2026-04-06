@@ -84,18 +84,25 @@ function applyThemeToDom(brandId: string, isDark: boolean): void {
 // ─── Provider ─────────────────────────────────────────────────────────────────
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [brandId, setBrandIdState] = useState<string>(() =>
-    readStorage(STORAGE_BRAND_KEY, DEFAULT_BRAND_ID)
-  );
-  const [mode, setModeState] = useState<ThemeMode>(() => {
-    const stored = readStorage(STORAGE_MODE_KEY, "system");
-    return stored === "light" || stored === "dark" || stored === "system"
-      ? (stored as ThemeMode)
-      : "system";
-  });
-  const [isDark, setIsDark] = useState<boolean>(() => resolveIsDark(mode));
+  const [brandId, setBrandIdState] = useState<string>(DEFAULT_BRAND_ID);
+  const [mode, setModeState] = useState<ThemeMode>("system");
+  const [isDark, setIsDark] = useState<boolean>(false);
 
   const brand = getBrand(brandId);
+
+  // Initialize from storage on mount to avoid server/client hydration mismatch.
+  useEffect(() => {
+    const storedBrand = readStorage(STORAGE_BRAND_KEY, DEFAULT_BRAND_ID);
+    const storedMode = readStorage(STORAGE_MODE_KEY, "system");
+    const resolvedMode: ThemeMode =
+      storedMode === "light" || storedMode === "dark" || storedMode === "system"
+        ? (storedMode as ThemeMode)
+        : "system";
+
+    setBrandIdState(storedBrand);
+    setModeState(resolvedMode);
+    setIsDark(resolveIsDark(resolvedMode));
+  }, []);
 
   // Apply DOM changes whenever brandId or isDark changes
   useEffect(() => {

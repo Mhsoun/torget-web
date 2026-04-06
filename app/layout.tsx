@@ -42,7 +42,7 @@ export default async function RootLayout({
           }}
         />
       </head>
-      <body className={`${inter.variable} antialiased`}>
+      <body suppressHydrationWarning className={`${inter.variable} antialiased`}>
         <Providers>{children}</Providers>
       </body>
     </html>
