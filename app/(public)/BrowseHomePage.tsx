@@ -2,7 +2,6 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
-import { useEffect } from "react";
 import { getItems, getPublicBrowseFilters } from "@/lib/api";
 import { ItemGrid } from "@/components/items/ItemGrid";
 import type { ItemBrowseSort } from "@/types/torget";
@@ -46,55 +45,6 @@ export default function BrowseHomePage({ showPrices = true }: BrowseHomePageProp
         attributeFilters: Object.keys(attributeFilters).length > 0 ? attributeFilters : undefined,
       }),
   });
-
-  useEffect(() => {
-    // #region agent log
-    fetch("http://127.0.0.1:7268/ingest/5a5cc7fb-dc54-4f3b-8e40-459b194f7edd", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "1a99c7" },
-      body: JSON.stringify({
-        sessionId: "1a99c7",
-        runId: "run-1",
-        hypothesisId: "H1",
-        location: "app/(public)/BrowseHomePage.tsx:54",
-        message: "Browse page mounted for debug session",
-        data: {
-          q: q ?? null,
-          sort: sort ?? null,
-          categoryId: categoryId ?? null,
-          itemCount: items.length,
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
-
-    const logo = document.querySelector('img[src*="/brands/torget/logo.svg"]') as HTMLImageElement | null;
-    // #region agent log
-    fetch("http://127.0.0.1:7268/ingest/5a5cc7fb-dc54-4f3b-8e40-459b194f7edd", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "1a99c7" },
-      body: JSON.stringify({
-        sessionId: "1a99c7",
-        runId: "run-1",
-        hypothesisId: "H2",
-        location: "app/(public)/BrowseHomePage.tsx:75",
-        message: "Logo runtime sizing snapshot",
-        data: logo
-          ? {
-              attrWidth: logo.getAttribute("width"),
-              attrHeight: logo.getAttribute("height"),
-              inlineWidth: logo.style.width || null,
-              inlineHeight: logo.style.height || null,
-              computedWidth: window.getComputedStyle(logo).width,
-              computedHeight: window.getComputedStyle(logo).height,
-            }
-          : { logoFound: false },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
-  }, [categoryId, items.length, q, sort]);
 
   return (
     <div className="space-y-8">

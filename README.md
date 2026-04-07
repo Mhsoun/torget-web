@@ -47,10 +47,6 @@ The dev server defaults to `http://localhost:5000` as the API base when `NEXT_PU
 NEXT_PUBLIC_TORGET_API_URL=http://localhost:5000
 ```
 
-## Local run (optional — Podman Compose)
-
-See `torget-dev/README.md` for the optional Compose path that runs the full stack in containers.
-
 ## Environment variables
 
 | Variable | Description |
