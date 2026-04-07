@@ -26,7 +26,7 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
     <Button
       variant="ghost"
       size="icon"
-      className={className}
+      className={`text-muted-foreground hover:text-foreground ${className ?? ""}`}
       onClick={toggleMode}
       aria-label={
         !mounted ? "Toggle theme" : isDark ? "Switch to light mode" : "Switch to dark mode"

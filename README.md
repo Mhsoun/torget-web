@@ -1,6 +1,6 @@
 # torget-web
 
-Public marketplace and admin UI for Torget — **Next.js 15**, React 19, Tailwind CSS, shadcn/ui.
+Public marketplace and admin UI for Torget — **Next.js App Router**, React 19, Tailwind CSS v4, shadcn/ui, next-themes, and tenant-aware semantic tokens.
 
 ## Architecture
 
@@ -9,6 +9,24 @@ Browser  →  torget-web (Next.js)  →  torget-core (HTTP API)
 ```
 
 `torget-web` calls `torget-core` only. It never communicates with `torget-data` or PostgreSQL directly.
+
+## Frontend architecture baseline
+
+- **UI foundation:** Tailwind CSS v4 + shadcn/ui component patterns. MUI is not used as the primary UI layer.
+- **Mode support:** `next-themes` controls light/dark/system mode via the `class` attribute on `<html>`.
+- **Token-first theming:** semantic CSS variables (`--background`, `--foreground`, `--primary`, `--muted`, `--border`, `--card`, `--accent`, `--radius`, etc.) drive all shared styling.
+- **Theme layers:** `src/theme/tokens/base.css`, `light.css`, `dark.css`, and tenant override files under `src/theme/tokens/tenants/`.
+- **Tenant-aware scaffolding:** `src/lib/tenant/` resolves tenant intent (host/path/preference fallback). Theme attributes are applied at the root so component code stays tenant-agnostic.
+- **Incremental migration note:** runtime routes/components remain in existing `app/` and `components/` folders for stability; `src/` contains the new architecture layers and contracts.
+
+## Migration status
+
+Current state is intentionally incremental:
+
+- **Migrated foundation:** token files in `src/theme/tokens`, tenant resolver scaffolding in `src/lib/tenant`, and baseline marketplace layer under `src/components/marketplace`.
+- **Still unmigrated by design:** full `src/app` move and broad relocation of legacy runtime components from root `components/*`.
+
+This keeps production behavior stable while enforcing token-first and tenant-aware patterns for all new frontend work.
 
 ## Local run (default — host-run services)
 

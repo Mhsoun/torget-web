@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { ImageIcon } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -29,9 +30,11 @@ export function ItemImage({ src, alt, className }: ItemImageProps) {
   }
 
   return (
-    <img
+    <Image
       src={src}
       alt={alt}
+      width={800}
+      height={600}
       onError={() => setBroken(true)}
       className={cn("w-full aspect-[4/3] object-cover", className)}
     />

@@ -5,10 +5,16 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useState,
 } from "react";
+import {
+  ThemeProvider as NextThemesProvider,
+  useTheme as useNextTheme,
+} from "next-themes";
 import { brands, DEFAULT_BRAND_ID, getBrand } from "@/lib/themes";
 import type { BrandConfig } from "@/lib/themes";
+import { resolveTenantFromBrowser } from "@/src/lib/tenant/resolveTenant";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -40,19 +46,9 @@ const ThemeContext = createContext<ThemeContextValue | null>(null);
 // ─── Storage keys ─────────────────────────────────────────────────────────────
 
 const STORAGE_BRAND_KEY = "torget-brand";
-const STORAGE_MODE_KEY = "torget-mode";
+const STORAGE_TENANT_KEY = "torget-tenant";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function resolveIsDark(mode: ThemeMode): boolean {
-  if (mode === "dark") return true;
-  if (mode === "light") return false;
-  // "system" — check media query
-  if (typeof window !== "undefined") {
-    return window.matchMedia("(prefers-color-scheme: dark)").matches;
-  }
-  return false;
-}
 
 function readStorage(key: string, fallback: string): string {
   if (typeof localStorage === "undefined") return fallback;
@@ -71,71 +67,44 @@ function writeStorage(key: string, value: string): void {
   }
 }
 
-function applyThemeToDom(brandId: string, isDark: boolean): void {
+function applyThemeToDom(brandId: string): void {
   const el = document.documentElement;
+  el.setAttribute("data-tenant", brandId);
   el.setAttribute("data-brand", brandId);
-  if (isDark) {
-    el.classList.add("dark");
-  } else {
-    el.classList.remove("dark");
-  }
 }
 
-// ─── Provider ─────────────────────────────────────────────────────────────────
-
-export function ThemeProvider({ children }: { children: React.ReactNode }) {
+function ThemeContextBridge({ children }: { children: React.ReactNode }) {
+  const { theme, setTheme, resolvedTheme } = useNextTheme();
   const [brandId, setBrandIdState] = useState<string>(DEFAULT_BRAND_ID);
-  const [mode, setModeState] = useState<ThemeMode>("system");
-  const [isDark, setIsDark] = useState<boolean>(false);
-
-  const brand = getBrand(brandId);
+  const mode: ThemeMode =
+    theme === "light" || theme === "dark" || theme === "system"
+      ? theme
+      : "system";
+  const isDark = resolvedTheme === "dark";
+  const brand = useMemo(() => getBrand(brandId), [brandId]);
 
   // Initialize from storage on mount to avoid server/client hydration mismatch.
   useEffect(() => {
-    const storedBrand = readStorage(STORAGE_BRAND_KEY, DEFAULT_BRAND_ID);
-    const storedMode = readStorage(STORAGE_MODE_KEY, "system");
-    const resolvedMode: ThemeMode =
-      storedMode === "light" || storedMode === "dark" || storedMode === "system"
-        ? (storedMode as ThemeMode)
-        : "system";
-
-    setBrandIdState(storedBrand);
-    setModeState(resolvedMode);
-    setIsDark(resolveIsDark(resolvedMode));
+    const resolvedTenant = resolveTenantFromBrowser();
+    const storedBrand = readStorage(STORAGE_BRAND_KEY, resolvedTenant.brandId);
+    setBrandIdState(getBrand(storedBrand).id);
   }, []);
 
-  // Apply DOM changes whenever brandId or isDark changes
+  // Apply tenant/brand attribute whenever the active brand changes.
   useEffect(() => {
-    applyThemeToDom(brandId, isDark);
-  }, [brandId, isDark]);
-
-  // Re-resolve "system" when prefers-color-scheme changes
-  useEffect(() => {
-    if (mode !== "system") return;
-
-    const mq = window.matchMedia("(prefers-color-scheme: dark)");
-    const handleChange = (e: MediaQueryListEvent) => {
-      setIsDark(e.matches);
-    };
-
-    mq.addEventListener("change", handleChange);
-    // Sync immediately in case it changed between renders
-    setIsDark(mq.matches);
-
-    return () => mq.removeEventListener("change", handleChange);
-  }, [mode]);
+    applyThemeToDom(brandId);
+  }, [brandId]);
 
   const setBrand = useCallback((id: string) => {
     const resolved = brands.find((b) => b.id === id)?.id ?? DEFAULT_BRAND_ID;
     setBrandIdState(resolved);
     writeStorage(STORAGE_BRAND_KEY, resolved);
+    writeStorage(STORAGE_TENANT_KEY, resolved);
   }, []);
 
   const setMode = useCallback((newMode: ThemeMode) => {
-    setModeState(newMode);
-    writeStorage(STORAGE_MODE_KEY, newMode);
-    setIsDark(resolveIsDark(newMode));
-  }, []);
+    setTheme(newMode);
+  }, [setTheme]);
 
   const toggleMode = useCallback(() => {
     setMode(isDark ? "light" : "dark");
@@ -156,6 +125,22 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     >
       {children}
     </ThemeContext.Provider>
+  );
+}
+
+// ─── Provider ─────────────────────────────────────────────────────────────────
+
+export function ThemeProvider({ children }: { children: React.ReactNode }) {
+  return (
+    <NextThemesProvider
+      attribute="class"
+      defaultTheme="system"
+      enableSystem
+      storageKey="torget-mode"
+      disableTransitionOnChange
+    >
+      <ThemeContextBridge>{children}</ThemeContextBridge>
+    </NextThemesProvider>
   );
 }
 

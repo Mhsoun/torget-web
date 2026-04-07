@@ -38,7 +38,7 @@ export default async function RootLayout({
         */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var b=localStorage.getItem('torget-brand')||'${defaultBrandKey}';var m=localStorage.getItem('torget-mode')||'system';var d=m==='dark'||(m==='system'&&window.matchMedia('(prefers-color-scheme:dark)').matches);document.documentElement.setAttribute('data-brand',b);if(d)document.documentElement.classList.add('dark');}catch(e){}})();`,
+            __html: `(function(){try{var t=localStorage.getItem('torget-tenant')||localStorage.getItem('torget-brand')||'${defaultBrandKey}';document.documentElement.setAttribute('data-tenant',t);document.documentElement.setAttribute('data-brand',t);}catch(e){}})();`,
           }}
         />
       </head>

@@ -109,7 +109,6 @@ export function AdminAttributeDefinitionForm({
   }, [definition, reset]);
 
   const watchedType = watch("type");
-  const watchedOptions = watch("options");
 
   function autoSlug(name: string) {
     return name

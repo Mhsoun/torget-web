@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
 interface GlobalErrorProps {
@@ -16,12 +17,12 @@ export default function GlobalError({ reset }: GlobalErrorProps) {
       </p>
       <div className="flex gap-3">
         <Button onClick={() => reset()}>Try again</Button>
-        <a
+        <Link
           href="/"
           className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium shadow-sm hover:bg-accent hover:text-accent-foreground transition-colors"
         >
           Go home
-        </a>
+        </Link>
       </div>
     </div>
   );

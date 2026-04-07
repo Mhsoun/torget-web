@@ -99,7 +99,7 @@ export default function BrowseHomePage({ showPrices = true }: BrowseHomePageProp
   return (
     <div className="space-y-8">
       <div className="space-y-4">
-        <h1 className="text-3xl font-bold tracking-tight">Browse items</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">Browse items</h1>
         <BrowseControls filters={filters} />
       </div>
 

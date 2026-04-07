@@ -1,4 +1,5 @@
 import { Fragment } from "react";
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import { getItem } from "@/lib/api";
 import { getCachedBusinessConfig } from "@/lib/config";
@@ -52,10 +53,12 @@ export default async function ItemDetailPage({ params }: ItemDetailPageProps) {
       {hasMultipleImages && (
         <div className="flex gap-2 overflow-x-auto pb-1">
           {galleryImages.map((img) => (
-            <img
+            <Image
               key={img.id}
               src={img.url}
               alt={img.altText ?? item.name}
+              width={96}
+              height={64}
               className="h-16 w-24 object-cover rounded-md flex-shrink-0 ring-1 ring-foreground/10"
             />
           ))}
