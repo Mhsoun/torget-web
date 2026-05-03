@@ -38,13 +38,119 @@ const resolvedBaseUrl =
 
 const BASE_URL = resolvedBaseUrl.replace(/\/$/, "");
 
+export type ApiErrorKind =
+  | "validation"
+  | "unauthorized"
+  | "forbidden"
+  | "not_found"
+  | "conflict"
+  | "unavailable"
+  | "unknown";
+
+type ApiErrorAction = "retry" | "sign_in" | "dismiss";
+
+type ErrorBodyShape = {
+  message?: string;
+  detail?: string;
+  title?: string;
+  error?: string;
+  errors?: Record<string, string[] | string>;
+};
+
 export class ApiError extends Error {
+  readonly kind: ApiErrorKind;
+  readonly details?: ErrorBodyShape | string;
+  readonly method: string;
+
   constructor(
     public readonly status: number,
     message: string,
+    args?: {
+      kind?: ApiErrorKind;
+      details?: ErrorBodyShape | string;
+      method?: string;
+    }
   ) {
     super(message);
     this.name = "ApiError";
+    this.kind = args?.kind ?? classifyApiErrorKind(status);
+    this.details = args?.details;
+    this.method = args?.method ?? "GET";
+  }
+}
+
+export function isApiError(error: unknown): error is ApiError {
+  return error instanceof ApiError;
+}
+
+export function isAuthApiError(error: unknown): boolean {
+  return isApiError(error) && (error.kind === "unauthorized" || error.kind === "forbidden");
+}
+
+export function classifyApiErrorKind(status: number): ApiErrorKind {
+  if (status === 400 || status === 422) return "validation";
+  if (status === 401) return "unauthorized";
+  if (status === 403) return "forbidden";
+  if (status === 404) return "not_found";
+  if (status === 409) return "conflict";
+  if (status >= 500 || status === 502 || status === 503 || status === 504) return "unavailable";
+  return "unknown";
+}
+
+export function getApiErrorUiState(error: unknown): {
+  title: string;
+  message: string;
+  action: ApiErrorAction;
+} {
+  if (!isApiError(error)) {
+    return {
+      title: "Unexpected error",
+      message: "Something went wrong. Please try again.",
+      action: "retry",
+    };
+  }
+
+  switch (error.kind) {
+    case "validation":
+      return { title: "Invalid request", message: error.message, action: "dismiss" };
+    case "unauthorized":
+      return { title: "Session expired", message: "Please sign in again.", action: "sign_in" };
+    case "forbidden":
+      return { title: "Access denied", message: "You do not have access to this action.", action: "dismiss" };
+    case "not_found":
+      return { title: "Not found", message: "The requested resource could not be found.", action: "dismiss" };
+    case "conflict":
+      return { title: "Conflict", message: error.message, action: "dismiss" };
+    case "unavailable":
+      return { title: "Backend unavailable", message: "The backend is currently unavailable. Please retry.", action: "retry" };
+    default:
+      return { title: "Request failed", message: error.message, action: "retry" };
+  }
+}
+
+function pickBestErrorMessage(payload: ErrorBodyShape | null, fallback: string): string {
+  if (!payload) {
+    return fallback;
+  }
+  return payload.message ?? payload.detail ?? payload.title ?? payload.error ?? fallback;
+}
+
+async function parseErrorBody(res: Response): Promise<{
+  payload: ErrorBodyShape | null;
+  fallbackText: string;
+}> {
+  const contentType = res.headers.get("content-type") ?? "";
+  const fallbackText = (await res.text().catch(() => "")).trim();
+
+  if (!contentType.includes("application/json") || !fallbackText) {
+    return { payload: null, fallbackText };
+  }
+
+  try {
+    const parsed = JSON.parse(fallbackText) as ErrorBodyShape;
+    return { payload: parsed, fallbackText };
+  } catch {
+    return { payload: null, fallbackText };
   }
 }
 
@@ -53,6 +159,7 @@ async function apiFetch<T>(
   options?: RequestInit & { token?: string }
 ): Promise<T> {
   const { token, ...rest } = options ?? {};
+  const method = (rest.method ?? "GET").toUpperCase();
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -62,8 +169,14 @@ async function apiFetch<T>(
   const res = await fetch(`${BASE_URL}${path}`, { ...rest, headers });
 
   if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new ApiError(res.status, `API error ${res.status}: ${text}`);
+    const { payload, fallbackText } = await parseErrorBody(res);
+    const fallback = fallbackText || `Request failed with status ${res.status}.`;
+    const message = pickBestErrorMessage(payload, fallback);
+    throw new ApiError(res.status, message, {
+      kind: classifyApiErrorKind(res.status),
+      details: payload ?? fallbackText,
+      method,
+    });
   }
 
   if (res.status === 204) {
@@ -330,8 +443,14 @@ export async function uploadItemImage(
   });
 
   if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new ApiError(res.status, `Upload failed ${res.status}: ${text}`);
+    const { payload, fallbackText } = await parseErrorBody(res);
+    const fallback = fallbackText || `Upload failed with status ${res.status}.`;
+    const message = pickBestErrorMessage(payload, fallback);
+    throw new ApiError(res.status, message, {
+      kind: classifyApiErrorKind(res.status),
+      details: payload ?? fallbackText,
+      method: "POST",
+    });
   }
 
   return res.json() as Promise<ItemImageResponse>;

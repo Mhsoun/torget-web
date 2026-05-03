@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useSession } from "next-auth/react";
 import {
   getItems,
   getCategories,
@@ -34,24 +33,26 @@ import {
 import { ItemFormDialog } from "@/components/admin/ItemFormDialog";
 import type { AdminItemFormSubmitData } from "@/components/admin/AdminItemForm";
 import { MoreHorizontal, Plus } from "lucide-react";
+import { useAdminAccessToken } from "@/hooks/useAdminAccessToken";
+import { AdminErrorPanel, AdminTableStateRow } from "@/components/admin/state";
 
 export default function AdminItemsPage() {
   const router = useRouter();
-  const { data: session } = useSession();
-  const token = session?.accessToken ?? "";
+  const { token, isSessionLoading, isAuthenticated, callbackUrl } = useAdminAccessToken();
   const qc = useQueryClient();
 
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  const { data: items = [], isLoading, isError: isItemsError } = useQuery({
+  const { data: items = [], isLoading, isError: isItemsError, error: itemsError, refetch: refetchItems } = useQuery({
     queryKey: ["items"],
     queryFn: () => getItems(),
-    enabled: !!token,
+    enabled: isAuthenticated,
   });
 
   const { data: categories = [] } = useQuery({
     queryKey: ["categories"],
     queryFn: getCategories,
+    enabled: isAuthenticated,
   });
   const createMutation = useMutation({
     mutationFn: async ({ item, attributes }: AdminItemFormSubmitData) => {
@@ -87,11 +88,30 @@ export default function AdminItemsPage() {
           onClick={() => {
             setDialogOpen(true);
           }}
+          disabled={!isAuthenticated || isSessionLoading}
         >
           <Plus className="h-4 w-4 mr-1" />
           New item
         </Button>
       </div>
+      {createMutation.isError ? (
+        <AdminErrorPanel
+          error={createMutation.error}
+          onSignIn={() => router.replace(`/admin/login?callbackUrl=${encodeURIComponent(callbackUrl)}`)}
+        />
+      ) : null}
+      {deleteMutation.isError ? (
+        <AdminErrorPanel
+          error={deleteMutation.error}
+          onSignIn={() => router.replace(`/admin/login?callbackUrl=${encodeURIComponent(callbackUrl)}`)}
+        />
+      ) : null}
+      {statusMutation.isError ? (
+        <AdminErrorPanel
+          error={statusMutation.error}
+          onSignIn={() => router.replace(`/admin/login?callbackUrl=${encodeURIComponent(callbackUrl)}`)}
+        />
+      ) : null}
 
       <div className="rounded-md border bg-background">
         <Table>
@@ -105,24 +125,17 @@ export default function AdminItemsPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                  Loading…
-                </TableCell>
-              </TableRow>
+            {isSessionLoading || isLoading ? (
+              <AdminTableStateRow colSpan={5} variant="loading" text="Loading items…" />
             ) : isItemsError ? (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-destructive">
-                  Failed to load items. Please refresh the page.
-                </TableCell>
-              </TableRow>
+              <AdminTableStateRow
+                colSpan={5}
+                variant="error"
+                text={itemsError instanceof Error ? itemsError.message : "Failed to load items."}
+                retry={() => refetchItems()}
+              />
             ) : items.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                  No items yet.
-                </TableCell>
-              </TableRow>
+              <AdminTableStateRow colSpan={5} variant="empty" text="No items yet." />
             ) : (
               items.map((item) => {
                 return (
@@ -139,7 +152,10 @@ export default function AdminItemsPage() {
                     </TableCell>
                     <TableCell>
                       <DropdownMenu>
-                        <DropdownMenuTrigger className="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-accent">
+                        <DropdownMenuTrigger
+                          disabled={deleteMutation.isPending || statusMutation.isPending}
+                          className="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-accent disabled:opacity-60"
+                        >
                           <MoreHorizontal className="h-4 w-4" />
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">

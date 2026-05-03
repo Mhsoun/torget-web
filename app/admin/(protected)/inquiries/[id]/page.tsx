@@ -1,11 +1,11 @@
 import { notFound } from "next/navigation";
-import { auth } from "@/lib/auth";
 import { getInquiry, ApiError } from "@/lib/api";
 import { formatDate } from "@/lib/formatters";
 import { Badge } from "@/components/ui/badge";
 import { InquiryStatusActions } from "./InquiryStatusActions";
 import Link from "next/link";
 import { ArrowLeft, MessageSquare } from "lucide-react";
+import { requireAdminAccessToken } from "@/lib/admin-session";
 
 interface InquiryDetailPageProps {
   params: Promise<{ id: string }>;
@@ -13,8 +13,7 @@ interface InquiryDetailPageProps {
 
 export default async function InquiryDetailPage({ params }: InquiryDetailPageProps) {
   const { id } = await params;
-  const session = await auth();
-  const token = session?.accessToken ?? "";
+  const token = await requireAdminAccessToken(`/admin/inquiries/${id}`);
 
   let inquiry;
   try {

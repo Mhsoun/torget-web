@@ -1,11 +1,12 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { patchInquiryStatus } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { INQUIRY_STATUSES } from "@/types/torget";
+import { useAdminAccessToken } from "@/hooks/useAdminAccessToken";
+import { AdminErrorPanel, AdminPendingHint } from "@/components/admin/state";
 
 interface InquiryStatusActionsProps {
   inquiryId: string;
@@ -13,8 +14,7 @@ interface InquiryStatusActionsProps {
 }
 
 export function InquiryStatusActions({ inquiryId, currentStatus }: InquiryStatusActionsProps) {
-  const { data: session } = useSession();
-  const token = session?.accessToken ?? "";
+  const { token, callbackUrl } = useAdminAccessToken();
   const router = useRouter();
   const qc = useQueryClient();
 
@@ -44,9 +44,14 @@ export function InquiryStatusActions({ inquiryId, currentStatus }: InquiryStatus
           </Button>
         ))}
       </div>
-      {mutation.isError && (
-        <p className="text-sm text-destructive">Failed to update status. Please try again.</p>
-      )}
+      <AdminPendingHint show={mutation.isPending} text="Updating status…" />
+      {mutation.isError ? (
+        <AdminErrorPanel
+          error={mutation.error}
+          titleOverride="Failed to update status"
+          onSignIn={() => window.location.assign(`/admin/login?callbackUrl=${encodeURIComponent(callbackUrl)}`)}
+        />
+      ) : null}
     </div>
   );
 }

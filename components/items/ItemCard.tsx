@@ -8,8 +8,6 @@ interface ItemCardProps {
 }
 
 export function ItemCard({ item, showPrices = true }: ItemCardProps) {
-  const hasCategoryLink = Boolean(item.categoryName && item.categorySlug);
-
   return (
     <ListingCard
       id={item.id}

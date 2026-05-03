@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useSession } from "next-auth/react";
 import {
   getAdminAttributes,
   createAdminAttribute,
@@ -39,20 +38,21 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { AdminAttributeDefinitionForm } from "@/components/admin/AdminAttributeDefinitionForm";
 import { MoreHorizontal, Plus, Tags } from "lucide-react";
+import { useAdminAccessToken } from "@/hooks/useAdminAccessToken";
+import { AdminErrorPanel, AdminPendingHint, AdminTableStateRow } from "@/components/admin/state";
 
 export default function AdminAttributesPage() {
-  const { data: session } = useSession();
-  const token = session?.accessToken ?? "";
+  const { token, isSessionLoading, isAuthenticated, callbackUrl } = useAdminAccessToken();
   const qc = useQueryClient();
 
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<AdminAttributeDefinitionResponse | null>(null);
   const [conflictError, setConflictError] = useState<string | null>(null);
 
-  const { data: attributes = [], isLoading, isError } = useQuery({
+  const { data: attributes = [], isLoading, isError, error, refetch } = useQuery({
     queryKey: ["admin-attributes"],
     queryFn: () => getAdminAttributes(token),
-    enabled: !!token,
+    enabled: isAuthenticated,
   });
 
   const createMutation = useMutation({
@@ -89,7 +89,7 @@ export default function AdminAttributesPage() {
       qc.invalidateQueries({ queryKey: ["definitions"] });
     },
     onError: (err: Error) => {
-      alert(err.message);
+      setConflictError(err.message);
     },
   });
 
@@ -129,11 +129,21 @@ export default function AdminAttributesPage() {
           <Tags className="h-5 w-5 text-muted-foreground" />
           <h1 className="text-2xl font-bold">Attributes</h1>
         </div>
-        <Button onClick={() => { setFormOpen(true); setConflictError(null); }}>
+        <Button
+          disabled={isSessionLoading || createMutation.isPending || updateMutation.isPending}
+          onClick={() => { setFormOpen(true); setConflictError(null); }}
+        >
           <Plus className="h-4 w-4 mr-1" />
           New attribute
         </Button>
       </div>
+      {conflictError ? (
+        <AdminErrorPanel
+          error={new Error(conflictError)}
+          titleOverride="Attribute operation failed"
+          onSignIn={() => window.location.assign(`/admin/login?callbackUrl=${encodeURIComponent(callbackUrl)}`)}
+        />
+      ) : null}
 
       <div className="rounded-md border bg-background">
         <Table>
@@ -150,24 +160,17 @@ export default function AdminAttributesPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                  Loading…
-                </TableCell>
-              </TableRow>
+            {isSessionLoading || isLoading ? (
+              <AdminTableStateRow colSpan={8} variant="loading" text="Loading attributes…" />
             ) : isError ? (
-              <TableRow>
-                <TableCell colSpan={8} className="text-center py-8 text-destructive">
-                  Failed to load attributes.
-                </TableCell>
-              </TableRow>
+              <AdminTableStateRow
+                colSpan={8}
+                variant="error"
+                text={error instanceof Error ? error.message : "Failed to load attributes."}
+                retry={() => refetch()}
+              />
             ) : attributes.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                  No attributes yet.
-                </TableCell>
-              </TableRow>
+              <AdminTableStateRow colSpan={8} variant="empty" text="No attributes yet." />
             ) : (
               attributes
                 .slice()
@@ -237,6 +240,7 @@ export default function AdminAttributesPage() {
               {conflictError}
             </div>
           )}
+          <AdminPendingHint show={createMutation.isPending} text="Creating attribute…" />
           <AdminAttributeDefinitionForm
             isSubmitting={createMutation.isPending}
             submitLabel="Create attribute"
@@ -260,6 +264,7 @@ export default function AdminAttributesPage() {
               {conflictError}
             </div>
           )}
+          <AdminPendingHint show={updateMutation.isPending} text="Saving attribute…" />
           {editing && (
             <AdminAttributeDefinitionForm
               definition={editing}

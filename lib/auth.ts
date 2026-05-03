@@ -38,11 +38,24 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (user) {
         token.accessToken = (user as { accessToken?: string }).accessToken;
         token.tokenExpiresAt = (user as { tokenExpiresAt?: string }).tokenExpiresAt;
+        token.authError = undefined;
       }
+
+      if (token.tokenExpiresAt) {
+        const expiresAt = Date.parse(token.tokenExpiresAt as string);
+        if (!Number.isNaN(expiresAt) && Date.now() >= expiresAt) {
+          token.accessToken = undefined;
+          token.tokenExpiresAt = undefined;
+          token.authError = "token_expired";
+        }
+      }
+
       return token;
     },
     async session({ session, token }) {
       session.accessToken = token.accessToken as string | undefined;
+      session.tokenExpiresAt = token.tokenExpiresAt as string | undefined;
+      session.authError = token.authError as string | undefined;
       return session;
     },
   },

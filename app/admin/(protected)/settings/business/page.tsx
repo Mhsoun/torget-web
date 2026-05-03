@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useSession } from "next-auth/react";
 import { getAdminBusinessConfig, upsertBusinessConfig } from "@/lib/api";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -10,6 +9,9 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Settings } from "lucide-react";
 import type { BusinessConfigWriteRequest } from "@/types/torget";
+import { useAdminAccessToken } from "@/hooks/useAdminAccessToken";
+import { AdminCapabilityBadge } from "@/components/admin/capabilities";
+import { AdminErrorPanel, AdminPageLoading, AdminPendingHint } from "@/components/admin/state";
 
 const EMPTY_FORM: BusinessConfigWriteRequest = {
   name: "",
@@ -25,8 +27,7 @@ const EMPTY_FORM: BusinessConfigWriteRequest = {
 };
 
 export default function BusinessSettingsPage() {
-  const { data: session } = useSession();
-  const token = session?.accessToken ?? "";
+  const { token, isSessionLoading, isAuthenticated, callbackUrl } = useAdminAccessToken();
   const qc = useQueryClient();
 
   const [form, setForm] = useState<BusinessConfigWriteRequest>(EMPTY_FORM);
@@ -35,7 +36,7 @@ export default function BusinessSettingsPage() {
   const { data: config, isLoading, isError: isConfigError } = useQuery({
     queryKey: ["business-config"],
     queryFn: () => getAdminBusinessConfig(token),
-    enabled: !!token,
+    enabled: isAuthenticated,
   });
 
   useEffect(() => {
@@ -72,19 +73,16 @@ export default function BusinessSettingsPage() {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-16 text-muted-foreground text-sm">
-        Loading settings…
-      </div>
-    );
+  if (isSessionLoading || isLoading) {
+    return <AdminPageLoading message="Loading settings…" />;
   }
 
   if (isConfigError) {
     return (
-      <div className="flex items-center justify-center py-16 text-destructive text-sm">
-        Failed to load settings. Please refresh the page.
-      </div>
+      <AdminErrorPanel
+        error={new Error("Failed to load settings.")}
+        onSignIn={() => window.location.assign(`/admin/login?callbackUrl=${encodeURIComponent(callbackUrl)}`)}
+      />
     );
   }
 
@@ -93,6 +91,7 @@ export default function BusinessSettingsPage() {
       <div className="flex items-center gap-2">
         <Settings className="h-6 w-6" />
         <h1 className="text-2xl font-bold">Business Settings</h1>
+        <AdminCapabilityBadge domain="business_config" />
       </div>
 
       <Card>
@@ -251,10 +250,15 @@ export default function BusinessSettingsPage() {
         {saved && (
           <p className="text-sm text-green-600">Settings saved successfully.</p>
         )}
-        {mutation.isError && (
-          <p className="text-sm text-destructive">Failed to save settings. Please try again.</p>
-        )}
+        <AdminPendingHint show={mutation.isPending} text="Saving settings…" />
       </div>
+      {mutation.isError ? (
+        <AdminErrorPanel
+          error={mutation.error}
+          titleOverride="Failed to save settings"
+          onSignIn={() => window.location.assign(`/admin/login?callbackUrl=${encodeURIComponent(callbackUrl)}`)}
+        />
+      ) : null}
     </div>
   );
 }

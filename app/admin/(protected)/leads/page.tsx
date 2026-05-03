@@ -1,7 +1,6 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useSession } from "next-auth/react";
 import { getLeads } from "@/lib/api";
 import {
   Table,
@@ -13,15 +12,19 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Users } from "lucide-react";
+import { AdminCapabilityBadge } from "@/components/admin/capabilities";
+import { getAdminCapability } from "@/lib/admin/capabilities";
+import { useAdminAccessToken } from "@/hooks/useAdminAccessToken";
+import { AdminTableStateRow } from "@/components/admin/state";
 
 export default function AdminLeadsPage() {
-  const { data: session } = useSession();
-  const token = session?.accessToken ?? "";
+  const { token, isSessionLoading, isAuthenticated } = useAdminAccessToken();
+  const leadsCapability = getAdminCapability("leads");
 
-  const { data: leads = [], isLoading, isError: isLeadsError } = useQuery({
+  const { data: leads = [], isLoading, isError: isLeadsError, error, refetch } = useQuery({
     queryKey: ["admin-leads"],
     queryFn: () => getLeads(token),
-    enabled: !!token,
+    enabled: isAuthenticated,
   });
 
   return (
@@ -29,6 +32,10 @@ export default function AdminLeadsPage() {
       <div className="flex items-center gap-2">
         <Users className="h-6 w-6" />
         <h1 className="text-2xl font-bold">Leads</h1>
+        <AdminCapabilityBadge domain="leads" />
+      </div>
+      <div className="rounded-md border border-border bg-muted/40 p-3 text-sm text-muted-foreground">
+        {leadsCapability.description}
       </div>
       <div className="rounded-md border bg-card">
         <Table>
@@ -40,20 +47,17 @@ export default function AdminLeadsPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">Loading…</TableCell>
-              </TableRow>
+            {isSessionLoading || isLoading ? (
+              <AdminTableStateRow colSpan={3} variant="loading" text="Loading leads…" />
             ) : isLeadsError ? (
-              <TableRow>
-                <TableCell colSpan={3} className="text-center py-8 text-destructive">
-                  Failed to load leads. Please refresh the page.
-                </TableCell>
-              </TableRow>
+              <AdminTableStateRow
+                colSpan={3}
+                variant="error"
+                text={error instanceof Error ? error.message : "Failed to load leads."}
+                retry={() => refetch()}
+              />
             ) : leads.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">No leads yet.</TableCell>
-              </TableRow>
+              <AdminTableStateRow colSpan={3} variant="empty" text="No leads yet." />
             ) : (
               leads.map((lead) => (
                 <TableRow key={lead.id}>

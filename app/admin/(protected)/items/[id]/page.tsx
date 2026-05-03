@@ -3,32 +3,33 @@
 import { useState } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useSession } from "next-auth/react";
-import { getItem, getCategories, updateAdminItemAttributes, updateItem } from "@/lib/api";
+import { getItem, getCategories, updateAdminItemAttributes, updateItem, isApiError } from "@/lib/api";
 import type { AdminItemFormSubmitData } from "@/components/admin/AdminItemForm";
 import { AdminItemForm } from "@/components/admin/AdminItemForm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
 import { AdminItemImagesPanel } from "@/components/admin/AdminItemImagesPanel";
+import { useAdminAccessToken } from "@/hooks/useAdminAccessToken";
+import { AdminErrorPanel, AdminPageLoading } from "@/components/admin/state";
 
 export default function EditItemPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
-  const { data: session } = useSession();
-  const token = session?.accessToken ?? "";
+  const { token, isSessionLoading, isAuthenticated, callbackUrl } = useAdminAccessToken();
   const [saved, setSaved] = useState(false);
 
-  const { data: item, isLoading } = useQuery({
+  const { data: item, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["item", id],
     queryFn: () => getItem(id),
-    enabled: !!id && !!token,
+    enabled: !!id && isAuthenticated,
   });
 
   const { data: categories = [] } = useQuery({
     queryKey: ["categories"],
     queryFn: getCategories,
+    enabled: isAuthenticated,
   });
 
   const mutation = useMutation({
@@ -44,12 +45,25 @@ export default function EditItemPage() {
     },
   });
 
-  if (isLoading) {
-    return <div className="p-4 text-muted-foreground">Loading…</div>;
+  if (isSessionLoading || isLoading) {
+    return <AdminPageLoading message="Loading item…" />;
+  }
+
+  if (isError) {
+    if (isApiError(error) && error.kind === "not_found") {
+      return <div className="p-4 text-destructive">Item not found.</div>;
+    }
+    return (
+      <AdminErrorPanel
+        error={error}
+        onRetry={() => refetch()}
+        onSignIn={() => router.replace(`/admin/login?callbackUrl=${encodeURIComponent(callbackUrl)}`)}
+      />
+    );
   }
 
   if (!item) {
-    return <div className="p-4 text-destructive">Item not found.</div>;
+    return <AdminPageLoading message="Loading item…" />;
   }
 
   return (
@@ -67,6 +81,12 @@ export default function EditItemPage() {
           Changes saved successfully.
         </div>
       )}
+      {mutation.isError ? (
+        <AdminErrorPanel
+          error={mutation.error}
+          onSignIn={() => router.replace(`/admin/login?callbackUrl=${encodeURIComponent(callbackUrl)}`)}
+        />
+      ) : null}
       <Card>
         <CardHeader>
           <CardTitle>Edit item</CardTitle>

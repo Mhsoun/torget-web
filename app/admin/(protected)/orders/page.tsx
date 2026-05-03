@@ -1,7 +1,6 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useSession } from "next-auth/react";
 import { getOrders, patchOrderStatus } from "@/lib/api";
 import {
   Table,
@@ -15,18 +14,23 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ShoppingCart } from "lucide-react";
 import { formatPrice } from "@/lib/formatters";
+import { AdminCapabilityBadge } from "@/components/admin/capabilities";
+import { canMutateDomain, getAdminCapability } from "@/lib/admin/capabilities";
+import { useAdminAccessToken } from "@/hooks/useAdminAccessToken";
+import { AdminErrorPanel, AdminPendingHint, AdminTableStateRow } from "@/components/admin/state";
 
 const ORDER_STATUSES = ["Pending", "Processing", "Shipped", "Completed", "Cancelled"];
 
 export default function AdminOrdersPage() {
-  const { data: session } = useSession();
-  const token = session?.accessToken ?? "";
+  const { token, isSessionLoading, isAuthenticated, callbackUrl } = useAdminAccessToken();
   const qc = useQueryClient();
+  const ordersCapability = getAdminCapability("orders");
+  const canMutateOrders = canMutateDomain("orders");
 
-  const { data: orders = [], isLoading, isError: isOrdersError } = useQuery({
+  const { data: orders = [], isLoading, isError: isOrdersError, error, refetch } = useQuery({
     queryKey: ["admin-orders"],
     queryFn: () => getOrders(token),
-    enabled: !!token,
+    enabled: isAuthenticated,
   });
 
   const statusMutation = useMutation({
@@ -40,7 +44,19 @@ export default function AdminOrdersPage() {
       <div className="flex items-center gap-2">
         <ShoppingCart className="h-6 w-6" />
         <h1 className="text-2xl font-bold">Orders</h1>
+        <AdminCapabilityBadge domain="orders" />
       </div>
+      {!canMutateOrders ? (
+        <div className="rounded-md border border-border bg-muted/40 p-3 text-sm text-muted-foreground">
+          {ordersCapability.description}
+        </div>
+      ) : null}
+      {statusMutation.isError ? (
+        <AdminErrorPanel
+          error={statusMutation.error}
+          onSignIn={() => window.location.assign(`/admin/login?callbackUrl=${encodeURIComponent(callbackUrl)}`)}
+        />
+      ) : null}
       <div className="rounded-md border bg-card">
         <Table>
           <TableHeader>
@@ -53,20 +69,17 @@ export default function AdminOrdersPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Loading…</TableCell>
-              </TableRow>
+            {isSessionLoading || isLoading ? (
+              <AdminTableStateRow colSpan={5} variant="loading" text="Loading orders…" />
             ) : isOrdersError ? (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-destructive">
-                  Failed to load orders. Please refresh the page.
-                </TableCell>
-              </TableRow>
+              <AdminTableStateRow
+                colSpan={5}
+                variant="error"
+                text={error instanceof Error ? error.message : "Failed to load orders."}
+                retry={() => refetch()}
+              />
             ) : orders.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No orders yet.</TableCell>
-              </TableRow>
+              <AdminTableStateRow colSpan={5} variant="empty" text="No orders yet." />
             ) : (
               orders.map((order) => (
                 <TableRow key={order.id}>
@@ -83,6 +96,7 @@ export default function AdminOrdersPage() {
                           key={s}
                           size="sm"
                           variant="outline"
+                          disabled={!canMutateOrders || statusMutation.isPending}
                           onClick={() => statusMutation.mutate({ id: order.id, status: s })}
                         >
                           {s}
@@ -96,6 +110,7 @@ export default function AdminOrdersPage() {
           </TableBody>
         </Table>
       </div>
+      <AdminPendingHint show={statusMutation.isPending} text="Updating order status…" />
     </div>
   );
 }

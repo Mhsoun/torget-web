@@ -1,7 +1,6 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useSession } from "next-auth/react";
 import { getInquiries, patchInquiryStatus } from "@/lib/api";
 import { formatDate } from "@/lib/formatters";
 import {
@@ -17,16 +16,17 @@ import { Button } from "@/components/ui/button";
 import { MessageSquare } from "lucide-react";
 import Link from "next/link";
 import { INQUIRY_STATUSES } from "@/types/torget";
+import { useAdminAccessToken } from "@/hooks/useAdminAccessToken";
+import { AdminErrorPanel, AdminTableStateRow } from "@/components/admin/state";
 
 export default function AdminInquiriesPage() {
-  const { data: session } = useSession();
-  const token = session?.accessToken ?? "";
+  const { token, isSessionLoading, isAuthenticated, callbackUrl } = useAdminAccessToken();
   const qc = useQueryClient();
 
-  const { data: inquiries = [], isLoading, isError: isInquiriesError } = useQuery({
+  const { data: inquiries = [], isLoading, isError: isInquiriesError, error, refetch } = useQuery({
     queryKey: ["admin-inquiries"],
     queryFn: () => getInquiries(token),
-    enabled: !!token,
+    enabled: isAuthenticated,
   });
 
   const statusMutation = useMutation({
@@ -41,6 +41,12 @@ export default function AdminInquiriesPage() {
         <MessageSquare className="h-6 w-6" />
         <h1 className="text-2xl font-bold">Inquiries</h1>
       </div>
+      {statusMutation.isError ? (
+        <AdminErrorPanel
+          error={statusMutation.error}
+          onSignIn={() => window.location.assign(`/admin/login?callbackUrl=${encodeURIComponent(callbackUrl)}`)}
+        />
+      ) : null}
       <div className="rounded-md border bg-card overflow-x-auto">
         <Table>
           <TableHeader>
@@ -56,24 +62,17 @@ export default function AdminInquiriesPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                  Loading…
-                </TableCell>
-              </TableRow>
+            {isSessionLoading || isLoading ? (
+              <AdminTableStateRow colSpan={8} variant="loading" text="Loading inquiries…" />
             ) : isInquiriesError ? (
-              <TableRow>
-                <TableCell colSpan={8} className="text-center py-8 text-destructive">
-                  Failed to load inquiries. Please refresh the page.
-                </TableCell>
-              </TableRow>
+              <AdminTableStateRow
+                colSpan={8}
+                variant="error"
+                text={error instanceof Error ? error.message : "Failed to load inquiries."}
+                retry={() => refetch()}
+              />
             ) : inquiries.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                  No inquiries yet.
-                </TableCell>
-              </TableRow>
+              <AdminTableStateRow colSpan={8} variant="empty" text="No inquiries yet." />
             ) : (
               inquiries.map((inq) => (
                 <TableRow key={inq.id}>

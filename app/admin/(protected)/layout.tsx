@@ -1,20 +1,15 @@
-import { redirect } from "next/navigation";
-import { auth } from "@/lib/auth";
 import { AdminNav } from "@/components/admin/AdminNav";
 import { signOut } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { getCachedBusinessConfig } from "@/lib/config";
+import { requireAdminAccessToken } from "@/lib/admin-session";
 
 export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const session = await auth();
-
-  if (!session) {
-    redirect("/admin/login");
-  }
+  await requireAdminAccessToken();
 
   const config = await getCachedBusinessConfig();
 

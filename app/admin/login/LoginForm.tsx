@@ -20,9 +20,10 @@ type LoginFormData = z.infer<typeof loginSchema>;
 
 interface LoginFormProps {
   adminTitle: string;
+  callbackUrl: string;
 }
 
-export function LoginForm({ adminTitle }: LoginFormProps) {
+export function LoginForm({ adminTitle, callbackUrl }: LoginFormProps) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
 
@@ -40,12 +41,17 @@ export function LoginForm({ adminTitle }: LoginFormProps) {
       email: data.email,
       password: data.password,
       redirect: false,
+      callbackUrl,
     });
 
     if (result?.error) {
-      setError("Invalid email or password.");
+      if (result.error === "CredentialsSignin") {
+        setError("Invalid email or password.");
+      } else {
+        setError("Sign in is unavailable right now. Please try again.");
+      }
     } else {
-      router.push("/admin/dashboard");
+      router.replace(callbackUrl);
     }
   }
 

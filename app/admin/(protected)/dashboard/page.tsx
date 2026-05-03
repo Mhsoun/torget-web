@@ -1,17 +1,18 @@
-import { auth } from "@/lib/auth";
 import { getDashboardStats } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LayoutDashboard, Package, ShoppingCart, MessageSquare, Users } from "lucide-react";
+import { requireAdminAccessToken } from "@/lib/admin-session";
+import { AdminCapabilityStatusPanel } from "@/components/admin/capabilities";
 
 export default async function DashboardPage() {
-  const session = await auth();
-  const token = session?.accessToken ?? "";
+  const token = await requireAdminAccessToken("/admin/dashboard");
 
   let stats = { totalItems: 0, totalOrders: 0, totalLeads: 0, openInquiries: 0 };
+  let statsUnavailable = false;
   try {
     stats = await getDashboardStats(token);
   } catch {
-    // show zeros if unavailable
+    statsUnavailable = true;
   }
 
   const cards = [
@@ -42,6 +43,15 @@ export default async function DashboardPage() {
           </Card>
         ))}
       </div>
+      {statsUnavailable ? (
+        <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+          Dashboard metrics are temporarily unavailable. Try refreshing the page.
+        </div>
+      ) : null}
+      <AdminCapabilityStatusPanel
+        domains={["dashboard", "orders", "leads", "auth"]}
+        title="Capability snapshot"
+      />
     </div>
   );
 }
